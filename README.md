@@ -10,7 +10,10 @@ to export a list of transactions for a given bank account and time period.
 
 This tool a workaround around the missing API. It uses a headless
 Chrome browser to log into the AirBank internet banking and download
-the CSV with transactions.
+the CSV with transactions. 
+
+It uses the following screen to download a list of transactions:
+![Filter transactions](tx-search.png)
  
 
 ## Usage
