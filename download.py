@@ -16,7 +16,7 @@ from selenium.webdriver.support import expected_conditions as EC
 
 import click
 
-TARGET_DATA_FOLDER = 'data'
+TARGET_DATA_FOLDER = '/data'
 QUIT_CHROME_ON_EXIT = True
 PAGE_TRANSITION_WAIT = 10  # seconds
 DOWNLOAD_TIMEOUT = 20  # seconds
