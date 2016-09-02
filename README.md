@@ -74,7 +74,7 @@ Try to open internet banking manually and fill in provided data.
 If not, try installing selenium and running the script locally.
 If that doesn't help, or you find yourself lost, please open an issue.
 
-## Licence
-[WTFPL](https://en.wikipedia.org/wiki/WTFPL)
+## License
+[MIT](http://choosealicense.com/licenses/mit/)
 
 
