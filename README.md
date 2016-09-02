@@ -23,7 +23,7 @@ docker run \
   --rm 
   --env AIRBANK_USERNAME="[username]" \
   --env AIRBANK_PASSWORD="[password]" \
-  --volume [download-dir]=/data \
+  --volume [download-dir]:/data \
   --privileged
   mkrcah/airbank-tx:latest \
   --period-from="[period-from]" --period-to="[period-to]" \
@@ -51,7 +51,7 @@ AIRBANK_USERNAME=john.doe
 AIRBANK_PASSWORD=super-secret-password
 
 $ docker run --env-file=env.list \
-   --volume $(pwd)/export-data=/data \ 
+   --volume $(pwd)/export-data:/data \ 
    --privileged mkrcah/airbank-tx \ 
    --period-from "01.01.2016" --period-to "01.07.2016" \
    --account-number "123456789/1234"
