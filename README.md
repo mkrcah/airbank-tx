@@ -20,11 +20,11 @@ It uses the following screen to download a list of transactions:
 
 ```bash
 docker run \
-  --rm 
+  --rm \
   --env AIRBANK_USERNAME="[username]" \
   --env AIRBANK_PASSWORD="[password]" \
   --volume [download-dir]:/data \
-  --privileged
+  --privileged \
   mkrcah/airbank-tx:latest \
   --period-from="[period-from]" --period-to="[period-to]" \
   --account-number="[account-number]" 
@@ -54,8 +54,8 @@ $ docker run --env-file=env.list \
    --volume $(pwd)/export-data:/data \ 
    --privileged mkrcah/airbank-tx \ 
    --period-from "01.01.2016" --period-to "01.07.2016" \
-   --account-number "123456789/1234"
-   --export-filename "airbank.csv"
+   --account-number "123456789/1234" \
+   --export-filename "airbank.csv" \
    --balance-filename "airbank-balance.txt"
 Starting chrome...
 Loading login page
