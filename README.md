@@ -4,7 +4,7 @@ Docker image to download bank account transactions and read account balance
 from [AirBank](http://airbank.cz/) internet banking.
 
 ## Rationale
-As of now (September 2016), AirBank doesn't provide API to expose a list
+As of now (November 2016), AirBank doesn't provide API to expose a list
 of transactions. However, it is possible within the internet banking 
 to export a list of transactions for a given bank account and time period.
 

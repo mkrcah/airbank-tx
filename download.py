@@ -3,7 +3,6 @@ from __future__ import print_function
 import time
 import os
 import sys
-import datetime
 import tempfile
 from shutil import copyfile
 
@@ -16,7 +15,7 @@ from selenium.webdriver.support import expected_conditions as EC
 
 import click
 
-TARGET_DATA_FOLDER = '/data'
+TARGET_DATA_FOLDER = os.getenv('AIRBANK_DOWNLOAD_DIR', '/data')
 QUIT_CHROME_ON_EXIT = True
 PAGE_TRANSITION_WAIT = 10  # seconds
 DOWNLOAD_TIMEOUT = 60  # seconds
@@ -127,15 +126,15 @@ def download_with_chrome(
         wait_for_loader(d)
         click_on(d, '//a[./span[text()="Historie plateb"]]')
         wait_for_loader(d)
-        click_on(d, '//a[span[text()="Vyhledat"]]')
+        click_on(d, '//a[span[text()="Podrobné vyhledávání"]]')
 
         iprint("Filling in transaction filters")
         wait_for_loader(d)
-        date_from = d.find_element_by_name('content:dateFrom:componentWrapper:component')
+        date_from = d.find_element_by_name('stateOrForm:formContent:dateFrom:componentWrapper:component')
         date_from.clear()
         date_from.send_keys(period_from)
 
-        date_to = d.find_element_by_name('content:dateTo:componentWrapper:component')
+        date_to = d.find_element_by_name('stateOrForm:formContent:dateTo:componentWrapper:component')
         date_to.clear()
         date_to.send_keys(period_to, Keys.ENTER)
 
