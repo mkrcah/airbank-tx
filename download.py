@@ -117,13 +117,14 @@ def download_with_chrome(
         wait_for_loader(d)
         click_on(d, '//span[text()="Účty a karty"]')
 
+        wait_for_loader(d)
+        click_on(d, '//*[text()="' + number + '"]')
+        wait_for_loader(d)
+
         if balance_filename:
             balance = read_account_balance(d)
             store_account_balance(balance, balance_filename)
 
-        wait_for_loader(d)
-        click_on(d, '//*[text()="' + number + '"]')
-        wait_for_loader(d)
         click_on(d, '//a[./span[text()="Historie plateb"]]')
         wait_for_loader(d)
         click_on(d, '//a[span[text()="Podrobné vyhledávání"]]')
