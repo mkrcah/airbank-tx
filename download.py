@@ -115,7 +115,7 @@ def download_with_chrome(
         d.find_element_by_css_selector('input[type="password"]').send_keys(password, Keys.ENTER)
 
         wait_for_loader(d)
-        click_on(d, '//span[text()="Účty"]')
+        click_on(d, '//span[text()="Účty a karty"]')
 
         if balance_filename:
             balance = read_account_balance(d)
