@@ -1,0 +1,16 @@
+{
+	"description": "Download airbank transactions",
+	"version": "0.0.1",
+	"license": "UNLICENSED",
+	"main": "download.js",
+	"scripts": {
+		"start": "node main.js"
+	},
+	"dependencies": {
+		"csvtojson": "^1.1.9",
+		"minimist": "^1.2.0",
+		"moment": "^2.19.2",
+		"puppeteer": "^0.12.0"
+	},
+	"repository": {}
+}
