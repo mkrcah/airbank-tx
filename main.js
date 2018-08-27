@@ -1,31 +1,6 @@
-const csv=require('csvtojson')
+const csv=require('csvtojson');
 const fs = require('fs');
-const moment = require('moment');
-const puppeteer = require('puppeteer');
-
-// from: https://github.com/GoogleChrome/puppeteer/issues/537#issuecomment-334918553
-async function xpath(page, path) {
-    const resultsHandle = await page.evaluateHandle(path => {
-        let results = [];
-        let query = document.evaluate(path, document, null, XPathResult.ORDERED_NODE_SNAPSHOT_TYPE, null);
-        for (let i=0, length = query.snapshotLength; i < length; ++i) {
-            results.push(query.snapshotItem(i));
-        }
-        return results;
-    }, path);
-    const properties = await resultsHandle.getProperties();
-    const result = [];
-    const releasePromises = [];
-    for (const property of properties.values()) {
-        const element = property.asElement();
-        if (element)
-            result.push(element);
-        else
-            releasePromises.push(property.dispose());
-    }
-    await Promise.all(releasePromises);
-    return result;
-}
+const Apify = require('apify');
 
 async function waitForLoader(page) {
     console.log("Waiting for loader to disappear");
@@ -34,126 +9,126 @@ async function waitForLoader(page) {
 }
 
 async function clickXPath(page, path) {
+    console.log(`Waiting for ${path} (also waiting a few seconds to be sure)`);
+    await page.waitForXPath(path);
+    await page.waitFor(5000);
+    buttons = await page.$x(path);
     console.log("Clicking on " + path)
-    await page.waitFor(3000);
-    const [handle] = await xpath(page, path);
-    await handle.click()
+    await buttons[0].click()
 
 }
 
 async function readAccountBalance(page) {
-    const textContent = await page.evaluate(() => document.querySelector('.numberPrimary').textContent);
-    const without_currency = textContent.trim().slice(0, -3);
-    const normalized = without_currency.replace(' ', '').replace(',', '.');
+    const el = await page.$('.numberPrimary');
+    const textContent = await page.evaluate(el => el.innerHTML, el);
+    const trimmed = textContent.replace(/\s/g,'').replace(/&nbsp;/g, '');
+    console.log(trimmed);
+    const without_currency = trimmed.slice(0, -3);
+    const normalized = without_currency.replace(/\s/g,'').replace(',', '.');
     return parseFloat(normalized)
 }
 
 
-function parseTx(t, f) {
-
-    function parseAmount(s) {
-        return parseFloat(s.replace(' ','').replace(',','.'))
-    }
-
-    function parseDate(d) {
-        return moment(d, "DD-MM-YYYY").format("YYYY-MM-DD");
-    }
-
-    function parseModality(t) {
-        switch(t) {
-            case 'Odchozí platba':
-                return 'wire';
-            case 'Platba kartou':
-                return 'card';
-            case 'Příchozí platba':
-                return 'wire';
-            case 'Karetní transakce (nezaúčtováno)':
-                return 'card';
-            case 'Vrácení peněz':
-                return 'refund';
-            case 'Výběr hotovosti':
-                return 'card';
-            default:
-                process.exit(1)
-        }
-    }
-
-    return {
-        'account_number': f.slice(8, 18) + "/3030",
-        'modality': parseModality(t['Typ platby']) || null,
-        'payment_made_at': parseDate(t['Datum provedení']) || null,
-        'amount': parseAmount(t['Částka v měně účtu']) || null,
-        'currency': t['Měna účtu'] || null,
-        'fee': parseAmount(t['Poplatek v měně účtu']) || 0,
-        'primary_amount': parseAmount(t['Původní částka platby']) || null,
-        'primary_currency': t['Původní měna platby'] || null,
-        'counterparty_account_label': t['Název protistrany'] || null,
-        'counterparty_account_number': t['Číslo účtu protistrany'] || null,
-        'counterparty_account_name': t['Název účtu protistrany'] || null,
-        'comment_for_sender': t['Poznámka pro mne'] || null,
-        'comment_for_recipient': t['Zpráva pro příjemce'] || null,
-        'comment': t['Zpráva pro příjemce'] || null,
-        'business_description': t['Obchodní místo'] || null,
-        'exchange_rate': parseAmount(t['Směnný kurz']) || null,
-    }
-}
-
-function parseTransactions() {
-    return new Promise((res, err) => {
-        fs.readdir('./download', (err, files) => {
-            files.forEach(f => {
-                csv({
-                    delimiter: ";",
-                    quote: '"',
-                    trim: true
-                }).fromFile('./download/' + f).on('json', (raw_tx)=>{
-                    return parseTx(raw_tx, f)
-                }).on('done', (all_tx) => {
-                    res(all_tx)
+async function parseTransactions() {
+    const files = fs.readdirSync('./download');
+    const parsed = files.map(f => {
+        return csv({quote:'"', delimiter:';'})
+            .fromFile('./download/' + f)
+            .then((txs) => {
+                return txs.map(tx => {
+                    tx['Číslo účtu'] = f.slice(8,18) + '/3030';
+                    return tx
                 })
             })
-        })
-
-    })
+    });
+    return Promise.all(parsed)
 }
 
-(async () => {
 
-    const argv = require('minimist')(process.argv.slice(2));
+async function getBrowserPage () {
+    const headless = process.env.HEADLESS !== "false";
+    const browser = await Apify.launchPuppeteer({headless});
+    return browser.newPage();
+}
 
-    const number = argv['account-number'];
+// https://stackoverflow.com/questions/10865025/merge-flatten-an-array-of-arrays-in-javascript/39000004#39000004
+const flatten = function(arr, result = []) {
+    for (let i = 0, length = arr.length; i < length; i++) {
+        const value = arr[i];
+        if (Array.isArray(value)) {
+            flatten(value, result);
+        } else {
+            result.push(value);
+        }
+    }
+    return result;
+};
 
-    console.log("Opening login page", process.env.AIRBANK_USERNAME);
-    const browser = await puppeteer.launch({args: ['--no-sandbox', '--disable-setuid-sandbox']});
-    const page = await browser.newPage();
+Apify.main(async () => {
+
+    const user_name = process.env.AIRBANK_USERNAME;
+    if (!user_name) throw new Error("username not set");
+
+    const password = process.env.AIRBANK_PASSWORD;
+    if (!password) throw new Error("password not set");
+
+    const input = await Apify.getValue('INPUT');
+    const account_numbers = input.account_numbers;
+    if (!account_numbers) throw new Error('account nrs not set');
+    console.log(account_numbers);
+
+    console.log("Opening login page");
+    const page = await getBrowserPage();
     await page.goto('https://ib.airbank.cz/');
 
     console.log("Logging in");
     await page.waitFor('input[type="text"]');
-    await page.type('input[type="text"]',  process.env.AIRBANK_USERNAME);
-    await page.type('input[type="password"]', process.env.AIRBANK_PASSWORD + String.fromCharCode(13));
+    await page.type('input[type="text"]', user_name);
+    await page.type('input[type="password"]', password + String.fromCharCode(13));
 
     await waitForLoader(page);
 
-    await clickXPath(page, '//span[text()="Účty a karty"]');
-    await clickXPath(page, '//*[text()="' + number + '"]');
+    let balances = {};
+    for (const account_number of account_numbers) {
+        console.log(`Scraping: ${user_name}, Numbers: ${account_number}`);
+        await clickXPath(page, '//span[text()="Účty a karty"]');
+        await page.waitFor(5000);
 
-    const balance = await readAccountBalance(page);
-    console.log(balance);
+        let account_tab_query = '//*[text()="' + account_number + '"]';
+        let account_tab = await page.$x(account_tab_query);
+        if (account_tab.length === 0) {
+            console.log(`Account tab for ${account_number} not found, swiping...`);
+            await clickXPath(page, '//*[@class="cmpListPageButton next"]');
+        }
+        await clickXPath(page, account_tab_query);
 
-    await clickXPath(page, '//a[./span[text()="Historie plateb"]]');
-    await clickXPath(page, '//a[span[text()="Podrobné vyhledávání"]]');
-    await clickXPath(page, '//a[span[text()="Hledat"]]');
-    await page._client.send('Page.setDownloadBehavior', {behavior: 'allow', downloadPath: './download'})
-    await clickXPath(page, '//span[text()="Exportovat"]');
-    await page.waitFor(1000*10);
+        let balance = await readAccountBalance(page);
+        console.log(`Balance: ${balance}`);
+        balances[account_number] = balance;
+
+        await clickXPath(page, '//a[./span[text()="Historie plateb"]]');
+        await page._client.send('Page.setDownloadBehavior', {behavior: 'allow', downloadPath: './download'});
+        await clickXPath(page, '//span[text()="Exportovat"]');
+        const wait_seconds = 10;
+        console.log(`Waiting for ${wait_seconds} seconds`);
+        await page.waitFor(1000*wait_seconds);
+        await clickXPath(page, '//button[@title="close"]')
+
+        let dirExists = fs.existsSync('./download');
+        console.log(dirExists ? fs.readdirSync('./download') : "Download dir doesn't exist")
+
+    }
 
     await fs.accessSync('./download');
-    await page.close();
-    await browser.close();
+    const tx = flatten(await parseTransactions());
+    const output = {
+        tx: tx,
+        balances: balances
+    };
 
-})().then().catch((e) => {
-    console.error(e)
+    await Apify.setValue('OUTPUT', output);
+    await page.close();
+
 });
 
 
