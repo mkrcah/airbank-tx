@@ -146,6 +146,10 @@ def download_with_chrome(
 
         click_on(d, '//span[text()="Exportovat"]')
 
+        iprint("Waiting for file to be ready to download")
+
+        click_on(d, '//a[contains(@href, "ExportCsv")]')
+
         iprint("Waiting for download to finish (by checking the download folder)")
         wait_for_download(download_folder)
 
