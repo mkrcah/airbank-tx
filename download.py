@@ -53,7 +53,7 @@ def init_chrome(download_folder):
         'download.prompt_for_download': False
     })
 
-    d = webdriver.Chrome(chrome_options=chrome_options)
+    d = webdriver.Chrome(options=chrome_options)
     d.implicitly_wait(PAGE_TRANSITION_WAIT)
     return d
 
